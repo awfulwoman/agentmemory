@@ -1,11 +1,19 @@
 #!/usr/bin/env python3
 import json
 import os
+import re
 import sys
 from datetime import datetime
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import common
+
+
+def _extract_current_focus(project_content: str) -> str:
+    m = re.search(r'## Current focus\s*\n(.*?)(?=\n## |\Z)', project_content, re.DOTALL)
+    if m:
+        return m.group(1).strip()
+    return ''
 
 
 def main():
@@ -29,14 +37,25 @@ def main():
     )
     common.append_wip(project, today, wip_header)
 
-    output_parts = []
+    context_parts = []
     if index_content.strip():
-        output_parts.append('## Agent Memory: All Projects\n\n' + index_content.strip())
+        context_parts.append('## Agent Memory: All Projects\n\n' + index_content.strip())
     if project_content.strip():
-        output_parts.append(f'## Agent Memory: {project}\n\n' + project_content.strip())
+        context_parts.append(f'## Agent Memory: {project}\n\n' + project_content.strip())
 
-    if output_parts:
-        print('\n\n'.join(output_parts))
+    out: dict = {}
+    if context_parts:
+        out['hookSpecificOutput'] = {
+            'hookEventName': 'SessionStart',
+            'additionalContext': '\n\n'.join(context_parts),
+        }
+
+    focus = _extract_current_focus(project_content)
+    if focus:
+        out['terminalSequence'] = f'\033]9;{project}: {focus}\007'
+
+    if out:
+        print(json.dumps(out))
 
 
 if __name__ == '__main__':
