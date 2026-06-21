@@ -19,16 +19,15 @@ def main():
     project = common.get_project_name(cwd)
     today = common.today()
 
-    index_content = common.run_notesmd(['print', 'projects/index.md'])
-    project_content = common.run_notesmd(['print', f'projects/{project}/PROJECT.md'])
+    index_content = common.read_note('projects/index.md')
+    project_content = common.read_note(f'projects/{project}/PROJECT.md')
 
-    wip = common.wip_path(project, today)
     timestamp = datetime.now().strftime('%H:%M')
     wip_header = (
         f'---\nproject: {project}\ndate: {today}\nagent: claude-code\nstatus: wip\n---\n\n'
         f'[{timestamp}] Session started\n'
     )
-    common.run_notesmd(['create', wip, '--content', wip_header])
+    common.append_wip(project, today, wip_header)
 
     output_parts = []
     if index_content.strip():

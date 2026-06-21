@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Deploy agent-memory hooks, skill, and vault to ~/.claude/ and ~/Documents/AgentMemory."""
+"""Deploy agent-memory hooks, skill, and vault to ~/.claude/ and ~/Documents/Personal/AgentMemory."""
 import json
 import os
 import shutil
@@ -14,15 +14,11 @@ HOOKS_DEST = CLAUDE_DIR / 'hooks' / 'agent-memory'
 SKILL_DEST = CLAUDE_DIR / 'skills' / 'agent-memory'
 SETTINGS_PATH = CLAUDE_DIR / 'settings.json'
 
-# session_end.py needs the anthropic package — it uses a dedicated venv
-HOOKS_VENV = HOOKS_DEST / '.venv'
-HOOKS_PYTHON = HOOKS_VENV / 'bin' / 'python'
-
 HOOK_ENTRIES = {
     'SessionStart': [{'hooks': [{'type': 'command', 'command': f'python3 {HOOKS_DEST}/session_start.py'}]}],
     'PostToolUse': [{'matcher': 'Edit|Write', 'hooks': [{'type': 'command', 'command': f'python3 {HOOKS_DEST}/post_tool_use.py'}]}],
     'PreCompact': [{'hooks': [{'type': 'command', 'command': f'python3 {HOOKS_DEST}/pre_compact.py'}]}],
-    'SessionEnd': [{'hooks': [{'type': 'command', 'command': f'{HOOKS_PYTHON} {HOOKS_DEST}/session_end.py'}]}],
+    'SessionEnd': [{'hooks': [{'type': 'command', 'command': f'python3 {HOOKS_DEST}/session_end.py'}]}],
 }
 
 
@@ -39,20 +35,8 @@ def deploy_hooks():
         print(f'  copied {f.name}')
 
 
-def create_hooks_venv():
-    print('\n[2] Creating hooks venv with anthropic...')
-    if not HOOKS_VENV.exists():
-        run(['uv', 'venv', str(HOOKS_VENV), '--python', '3.14'])
-    run(['uv', 'pip', 'install', '--python', str(HOOKS_PYTHON), '-q', 'anthropic'])
-    result = subprocess.run(
-        [str(HOOKS_PYTHON), '-c', 'import anthropic; print(anthropic.__version__)'],
-        capture_output=True, text=True,
-    )
-    print(f'  anthropic {result.stdout.strip()} installed in hooks venv')
-
-
 def deploy_skill():
-    print('\n[3] Deploying skill...')
+    print('\n[2] Deploying skill...')
     SKILL_DEST.mkdir(parents=True, exist_ok=True)
     src = REPO_ROOT / 'src' / 'skills' / 'agent-memory' / 'SKILL.md'
     shutil.copy2(src, SKILL_DEST / 'SKILL.md')
@@ -60,7 +44,7 @@ def deploy_skill():
 
 
 def wire_hooks():
-    print('\n[4] Wiring hooks into ~/.claude/settings.json...')
+    print('\n[3] Wiring hooks into ~/.claude/settings.json...')
     settings = json.loads(SETTINGS_PATH.read_text()) if SETTINGS_PATH.exists() else {}
     hooks = settings.setdefault('hooks', {})
     for event, entries in HOOK_ENTRIES.items():
@@ -73,7 +57,7 @@ def wire_hooks():
 
 
 def bootstrap_vault():
-    print('\n[5] Bootstrapping vault...')
+    print('\n[4] Bootstrapping vault...')
     vault_src = REPO_ROOT / 'src' / 'vault'
     for src_file in vault_src.rglob('*'):
         if src_file.is_file():
@@ -87,20 +71,8 @@ def bootstrap_vault():
                 print(f'  skipped {rel} (already exists)')
 
 
-def register_vault():
-    print('\n[6] Registering vault with notesmd-cli...')
-    result = subprocess.run(
-        ['notesmd-cli', 'list-vaults', '--path-only'],
-        capture_output=True, text=True,
-    )
-    if str(VAULT_PATH) in result.stdout:
-        print(f'  already registered at {VAULT_PATH}')
-        return
-    run(['notesmd-cli', 'add-vault', str(VAULT_PATH), '--set-default'])
-
-
 def add_to_chezmoi():
-    print('\n[7] Adding skill and hooks to chezmoi...')
+    print('\n[5] Adding skill and hooks to chezmoi...')
     files_to_add = [
         SKILL_DEST / 'SKILL.md',
         SETTINGS_PATH,
@@ -120,11 +92,9 @@ if __name__ == '__main__':
     print(f'  vault  → {VAULT_PATH}')
 
     deploy_hooks()
-    create_hooks_venv()
     deploy_skill()
     wire_hooks()
     bootstrap_vault()
-    register_vault()
     add_to_chezmoi()
 
     print('\nDone. Start a new Claude Code session to activate.')

@@ -6,7 +6,7 @@ when: always
 
 # Agent Memory
 
-You have access to a persistent memory vault at `~/Documents/AgentMemory` (or `$AGENT_MEMORY_VAULT`).
+You have access to a persistent memory vault at `~/Documents/Personal/AgentMemory` (or `$AGENT_MEMORY_VAULT`).
 This vault stores your memory across sessions and projects. It is written by you, not by the user.
 
 ## At session start (proactive)
@@ -17,8 +17,8 @@ your context. Read them — they tell you what has been worked on recently acros
 If you do not see vault context injected above, read it yourself:
 
 ```bash
-notesmd-cli print "projects/index.md" --vault "AgentMemory"
-notesmd-cli print "projects/<current-project>/PROJECT.md" --vault "AgentMemory"
+cat ~/Documents/Personal/AgentMemory/projects/index.md
+cat ~/Documents/Personal/AgentMemory/projects/<current-project>/PROJECT.md
 ```
 
 Where `<current-project>` is the basename of the git root (or current directory if not in a git repo).
@@ -34,12 +34,12 @@ Where `<current-project>` is the basename of the git root (or current directory 
 
 **To search the vault mid-session:**
 ```bash
-notesmd-cli search-content "search term" --format json --vault "AgentMemory"
+grep -r "search term" ~/Documents/Personal/AgentMemory --include="*.md" -l
 ```
 
 **To read a specific project:**
 ```bash
-notesmd-cli print "projects/<name>/PROJECT.md" --vault "AgentMemory"
+cat ~/Documents/Personal/AgentMemory/projects/<name>/PROJECT.md
 ```
 
 ## Rules
