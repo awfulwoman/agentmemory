@@ -16,6 +16,7 @@ SETTINGS_PATH = CLAUDE_DIR / 'settings.json'
 
 HOOK_ENTRIES = {
     'SessionStart': [{'hooks': [{'type': 'command', 'command': f'python3 {HOOKS_DEST}/session_start.py'}]}],
+    'UserPromptSubmit': [{'hooks': [{'type': 'command', 'command': f'python3 {HOOKS_DEST}/user_prompt.py', 'async': True}]}],
     'PostToolUse': [{'matcher': 'Edit|Write', 'hooks': [{'type': 'command', 'command': f'python3 {HOOKS_DEST}/post_tool_use.py'}]}],
     'PreCompact': [{'hooks': [{'type': 'command', 'command': f'python3 {HOOKS_DEST}/pre_compact.py'}]}],
     'SessionEnd': [{'hooks': [{'type': 'command', 'command': f'python3 {HOOKS_DEST}/session_end.py'}]}],
