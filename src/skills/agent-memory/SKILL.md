@@ -47,7 +47,7 @@ cat ~/Documents/Personal/AgentMemory/projects/<name>/PROJECT.md
 1. **Facts only.** Never write speculation. Only record what directly happened or was decided.
 2. **No secrets.** Never write credentials, tokens, passwords, or sensitive data to the vault.
 3. **Contradiction rule.** If the vault says X and the live codebase says Y, trust the codebase.
-   Flag the conflict and note it — the session-end hook will capture it.
+    Flag the conflict and note it — the session-end hook will capture it.
 4. **Repo truth wins.** Vault notes about code are summaries — the codebase is always the source of truth.
 
 ## What belongs here vs native Claude memory
