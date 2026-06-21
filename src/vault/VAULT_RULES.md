@@ -27,4 +27,4 @@ This vault is written and maintained by AI agents. It is not a human knowledge b
 
 1. Always read `projects/index.md`
 2. If working in a known project directory, read `projects/<name>/PROJECT.md`
-3. For mid-session cross-project queries, read `projects/index.md` again or use `notesmd-cli search-content`
+3. For mid-session cross-project queries, read `projects/index.md` again or `grep -r "term" ~/Documents/Personal/AgentMemory --include="*.md" -l`
