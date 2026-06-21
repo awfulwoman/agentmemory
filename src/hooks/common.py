@@ -4,7 +4,7 @@ from datetime import date
 
 
 def get_vault_path() -> str:
-    return os.environ.get('AGENT_MEMORY_VAULT', os.path.expanduser('~/Documents/AgentMemory'))
+    return os.environ.get('AGENT_MEMORY_VAULT', os.path.expanduser('~/Documents/Personal/AgentMemory'))
 
 
 def get_vault_name() -> str:

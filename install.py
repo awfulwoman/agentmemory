@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).parent
-VAULT_PATH = Path(os.environ.get('AGENT_MEMORY_VAULT', Path.home() / 'Documents' / 'AgentMemory'))
+VAULT_PATH = Path(os.environ.get('AGENT_MEMORY_VAULT', Path.home() / 'Documents' / 'Personal' / 'AgentMemory'))
 CLAUDE_DIR = Path.home() / '.claude'
 HOOKS_DEST = CLAUDE_DIR / 'hooks' / 'agent-memory'
 SKILL_DEST = CLAUDE_DIR / 'skills' / 'agent-memory'

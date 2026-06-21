@@ -16,7 +16,7 @@ def test_get_vault_path_default():
     env = {k: v for k, v in os.environ.items() if k != 'AGENT_MEMORY_VAULT'}
     with patch.dict(os.environ, env, clear=True):
         result = common.get_vault_path()
-        assert result == os.path.expanduser('~/Documents/AgentMemory')
+        assert result == os.path.expanduser('~/Documents/Personal/AgentMemory')
 
 
 def test_get_project_name_from_git(tmp_path):
