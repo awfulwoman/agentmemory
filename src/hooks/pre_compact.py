@@ -17,12 +17,11 @@ def main():
 
     cwd = data.get('cwd', os.getcwd())
     project = common.get_project_name(cwd)
-    today = common.today()
-    wip = common.wip_path(project, today)
+    session_date = common.find_wip(project) or common.today()
 
     timestamp = datetime.now().strftime('%H:%M')
     line = f'[{timestamp}] ---pre-compact checkpoint---\n'
-    common.run_notesmd(['create', wip, '--content', line, '--append'])
+    common.append_wip(project, session_date, line)
 
 
 if __name__ == '__main__':

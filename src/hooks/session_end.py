@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
 import json
 import os
+import re
+import subprocess
 import sys
+import tempfile
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import common
-import anthropic
 
-SYSTEM_PROMPT = (
-    'You process raw session logs for an agent memory vault. '
-    'Output ONLY valid JSON with no markdown fences. Facts only — no speculation.'
-)
+PROMPT = """\
+You process raw session logs for an agent memory vault.
+Output ONLY valid JSON with no markdown fences. Facts only — no speculation.
 
-USER_PROMPT = """\
 WIP session log:
 {wip_content}
 
@@ -30,7 +30,7 @@ Output only the JSON object, no other text.\
 
 
 def _update_index(project: str, cwd: str, index_line: str) -> None:
-    index_content = common.run_notesmd(['print', 'projects/index.md'])
+    index_content = common.read_note('projects/index.md')
     entry = f'## {project}\nPath: {cwd} | Status: active\n{index_line}\n'
 
     if f'## {project}' in index_content:
@@ -45,61 +45,43 @@ def _update_index(project: str, cwd: str, index_line: str) -> None:
                 new_lines.append(line)
             elif not skip:
                 new_lines.append(line)
-        common.run_notesmd([
-            'create', 'projects/index.md',
-            '--content', '\n'.join(new_lines),
-            '--overwrite',
-        ])
+        common.write_note('projects/index.md', '\n'.join(new_lines))
     else:
-        common.run_notesmd(['create', 'projects/index.md', '--content', '\n' + entry, '--append'])
+        common.append_note('projects/index.md', '\n' + entry)
 
 
-def main():
-    raw = sys.stdin.read()
-    try:
-        data = json.loads(raw)
-    except json.JSONDecodeError:
-        return
-
+def process(data: dict) -> None:
     cwd = data.get('cwd', os.getcwd())
     project = common.get_project_name(cwd)
-    today = common.today()
-    wip = common.wip_path(project, today)
+    today = common.find_wip(project) or common.today()
 
-    wip_content = common.run_notesmd(['print', wip])
+    wip_content = common.read_wip(project, today)
     if not wip_content.strip():
         return
 
     project_page = f'projects/{project}/PROJECT.md'
-    project_content = common.run_notesmd(['print', project_page])
+    project_content = common.read_note(project_page)
 
-    client = anthropic.Anthropic()
-    message = client.messages.create(
-        model='claude-haiku-4-5-20251001',
-        max_tokens=1024,
-        system=SYSTEM_PROMPT,
-        messages=[{
-            'role': 'user',
-            'content': USER_PROMPT.format(
-                wip_content=wip_content,
-                project_content=project_content or '(no existing project page)',
-                date=today,
-            ),
-        }],
+    result_raw = subprocess.run(
+        ['claude', '--model', 'claude-haiku-4-5-20251001', '-p',
+         PROMPT.format(
+             wip_content=wip_content,
+             project_content=project_content or '(no existing project page)',
+             date=today,
+         )],
+        capture_output=True, text=True, timeout=60,
     )
 
+    text = re.sub(r'^```(?:json)?\s*', '', result_raw.stdout.strip())
+    text = re.sub(r'\s*```$', '', text)
     try:
-        result = json.loads(message.content[0].text)
-    except (json.JSONDecodeError, IndexError, AttributeError):
+        result = json.loads(text)
+    except json.JSONDecodeError:
         return
 
     session_note_path = common.session_path(project, today)
     frontmatter = f'---\nproject: {project}\ndate: {today}\nagent: claude-code\n---\n\n'
-    common.run_notesmd([
-        'create', session_note_path,
-        '--content', frontmatter + result.get('session_note', ''),
-        '--overwrite',
-    ])
+    common.write_note(session_note_path, frontmatter + result.get('session_note', ''))
 
     decisions_md = '\n'.join(f'- {d}' for d in result.get('decisions', []))
     project_body = (
@@ -107,12 +89,45 @@ def main():
         f'## Current focus\n{result.get("current_focus", "")}\n\n'
         f'## Key decisions\n{decisions_md}\n'
     )
-    common.run_notesmd(['create', project_page, '--content', project_body, '--overwrite'])
+    common.write_note(project_page, project_body)
 
     _update_index(project, cwd, result.get('index_line', ''))
 
-    common.run_notesmd(['delete', wip])
+    common.delete_wip(project, today)
+
+
+def hook_mode() -> None:
+    """Read stdin from Claude Code and spawn a detached background processor."""
+    raw = sys.stdin.read()
+    try:
+        json.loads(raw)  # validate before writing
+    except json.JSONDecodeError:
+        return
+
+    tf = tempfile.NamedTemporaryFile(delete=False, suffix='.json', mode='w')
+    tf.write(raw)
+    tf.close()
+
+    log = open('/tmp/agent-memory-session-end.log', 'a')
+    subprocess.Popen(
+        [sys.executable, __file__, tf.name],
+        start_new_session=True,
+        stdin=subprocess.DEVNULL,
+        stdout=log,
+        stderr=log,
+    )
+
+
+def processor_mode(tmp_path: str) -> None:
+    """Background processor: read temp file, call Claude, update vault."""
+    with open(tmp_path) as f:
+        data = json.load(f)
+    os.unlink(tmp_path)
+    process(data)
 
 
 if __name__ == '__main__':
-    main()
+    if len(sys.argv) > 1:
+        processor_mode(sys.argv[1])
+    else:
+        hook_mode()
